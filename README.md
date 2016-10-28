@@ -6,13 +6,10 @@ The package provides a simple class called MailChimpSubscriber that offers a sub
 It only depends on Monolog for logging and Guzzle to make the API requests.
 
 ## Install
-```bash
-TODO: composer require stilliard/DEMO dev-master
-```
+```composer require tweedegolf/mailchimp-v3-subscriber dev-master```
 
 ## Usage
-
-TODO: How to use it?
+Trivial, see the MailChimpSubscriber class.
 
 ### License
 
