@@ -114,6 +114,8 @@ class MailChimpSubscriber
         return $this->getResult($response);
     }
 
+    // todo: move to constructor
+
     /**
      * Return Guzzle client
      * @return Client
@@ -124,7 +126,7 @@ class MailChimpSubscriber
 
         $client = new Client([
             // the 'tweedegolf' username can be anything, as per MailChimp api docs
-            'base_uri' => "https://tweedegolf:{$key}@{$dataCenterIdentifier}.{$this->root}",
+            'base_uri' => "https://x:{$key}@{$dataCenterIdentifier}.{$this->root}",
             'headers' => [
                 'Accept' => 'application/json'
             ],
@@ -133,6 +135,8 @@ class MailChimpSubscriber
 
         return $client;
     }
+
+    //todo: throw exception MailChimpException if
 
     /**
      * Parses the response to return a simplified result
@@ -154,7 +158,11 @@ class MailChimpSubscriber
             $result['error'] = false;
             $result['error_message'] = null;
 
+            //todo add try catch and check if body is not empty
             $data = json_decode($response->getBody()->getContents(), true);
+
+
+            //todo return data
 
             // return some useful params in the result
             $result['email_address'] = $data['email_address'];
