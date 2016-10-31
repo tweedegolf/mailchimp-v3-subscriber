@@ -2,10 +2,13 @@
 
 namespace TweedeGolf\MailChimpV3Subscriber;
 
+use Behat\Mink\Exception\Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
+use TweedeGolf\MailChimpV3Subscriber\Exception\MemberInfoException;
+use TweedeGolf\MailChimpV3Subscriber\Exception\SubscribeException;
 
 /**
  * MailChimp subscriber that uses the v3 api to subscribe subscribers to a given list
@@ -32,10 +35,9 @@ class MailChimpSubscriber
     private $listId;
 
     /**
-     * Root of the MailChimp v3 api, is prefixed with the data center identifier;
-     * @var string
+     * @var Client
      */
-    private $root = 'api.mailchimp.com/3.0/';
+    private $client;
 
     /**
      * MailChimpSubscriber constructor.
@@ -49,6 +51,31 @@ class MailChimpSubscriber
         $this->logger = $logger;
         $this->apiKey = $apiKey;
         $this->listId= $list;
+        $this->client = $this->initClient($apiKey);
+    }
+
+    //todo: use http auth header in stead of in url
+
+    /**
+     * Return Guzzle client
+     * @param $apiKey
+     * @return Client
+     */
+    private function initClient($apiKey)
+    {
+        $root = 'api.mailchimp.com/3.0/';
+        list($key, $dataCenterIdentifier) = explode('-', $apiKey);
+
+        $client = new Client([
+            // the 'x' username can be anything, as per MailChimp api docs
+            'base_uri' => "https://x:{$key}@{$dataCenterIdentifier}.{$root}",
+            'headers' => [
+                'Accept' => 'application/json'
+            ],
+            'timeout'  => 2.0,
+        ]);
+
+        return $client;
     }
 
     /**
@@ -61,11 +88,11 @@ class MailChimpSubscriber
 
     /**
      * @param $email
-     * @param array $mergeTags
+     * @param array $mergeFields
      * @return array
      * @throws \Exception
      */
-    public function subscribe($email, array $mergeTags = [])
+    public function subscribe($email, array $mergeFields = [])
     {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new \InvalidArgumentException("{$email} is not a valid email address");
@@ -75,17 +102,6 @@ class MailChimpSubscriber
             throw new \Exception("List id is not set");
         }
 
-        return $this->makeSubscribeCall($email, $mergeTags);
-    }
-
-    /**
-     * @param $email
-     * @param array $mergeTags
-     * @return array
-     */
-    private function makeSubscribeCall($email, array $mergeTags = [])
-    {
-        $client = $this->getClient();
         $hash = md5(strtolower($email));
         $url = "lists/{$this->listId}/members/{$hash}";
 
@@ -94,83 +110,111 @@ class MailChimpSubscriber
             'status_if_new' => 'subscribed',
         ];
 
-        // submitting empty merge tags array yields bad request exception
-        if ($mergeTags !== []) {
-            $body['merge_fields'] = $mergeTags;
+        // submitting empty merge fields array yields bad request exception
+        if ($mergeFields !== []) {
+            $body['merge_fields'] = $mergeFields;
         }
 
         try {
-            $response = $client->put($url, ['json' => $body]);
+            //todo: change to post request?
+            $response = $this->client->put($url, ['json' => $body]);
         } catch(ClientException $e) {
             $message = $e->getMessage();
-            $this->logger->error("Subscribing {$email} to list {$this->listId} failed with exception message {$message}");
-            return [
-                'error' => true,
-                'error_message' => "Bad request exception",
-                'subscriber_status' => null
-            ];
+            $this->logger->error("Subscribing email {$email} to list {$this->listId} failed with exception message {$message}");
+
+            // convert to subscribe exception
+            throw new SubscribeException();
         }
 
-        return $this->getResult($response);
+        return $this->getSubscriptionResult($response);
     }
-
-    // todo: move to constructor
-
-    /**
-     * Return Guzzle client
-     * @return Client
-     */
-    private function getClient()
-    {
-        list($key, $dataCenterIdentifier) = explode('-', $this->apiKey);
-
-        $client = new Client([
-            // the 'tweedegolf' username can be anything, as per MailChimp api docs
-            'base_uri' => "https://x:{$key}@{$dataCenterIdentifier}.{$this->root}",
-            'headers' => [
-                'Accept' => 'application/json'
-            ],
-            'timeout'  => 2.0,
-        ]);
-
-        return $client;
-    }
-
-    //todo: throw exception MailChimpException if
 
     /**
      * Parses the response to return a simplified result
      *
      * @param ResponseInterface $response
      * @return array
+     * @throws SubscribeException
      */
-    private function getResult(ResponseInterface $response)
+    private function getSubscriptionResult(ResponseInterface $response)
     {
-        // expect error
-        $result = [
-            'error' => true,
-            'error_message' => 'An unknown error occurred when calling the MailChimp API',
-            'subscriber_status' => null
-        ];
-
-        // convert to no error if we got a 200 response
         if ($response->getStatusCode() === 200) {
-            $result['error'] = false;
-            $result['error_message'] = null;
 
-            //todo add try catch and check if body is not empty
-            $data = json_decode($response->getBody()->getContents(), true);
+            if (!is_object($response->getBody())) {
+                throw new SubscribeException();
+            }
 
+            $contents = $response->getBody()->getContents();
 
-            //todo return data
+            if (empty($contents)) {
+                throw new SubscribeException();
+            }
 
-            // return some useful params in the result
-            $result['email_address'] = $data['email_address'];
-            $result['status'] = $data['status'];
-            $result['unique_email_id'] = $data['unique_email_id'];
-            $result['merge_fields'] = $data['merge_fields'];
+            try {
+                $data = json_decode($contents, true);
+            } catch (Exception $e) {
+                throw new SubscribeException();
+            }
+
+            return $data;
         }
 
-        return $result;
+        throw new SubscribeException();
     }
+
+    /**
+     * @param $email
+     * @return mixed
+     * @throws MemberInfoException
+     */
+    public function getMemberInfo($email)
+    {
+        $hash = md5(strtolower($email));
+        $url = "lists/{$this->listId}/members/{$hash}";
+
+        try {
+            $response = $this->client->get($url);
+        } catch (ClientException $e) {
+            $message = $e->getMessage();
+            $this->logger->error("Obtaining member info for email {$email} from list {$this->listId} failed with exception message {$message}");
+
+            throw new MemberInfoException();
+        }
+
+        return $this->getMemberInfoResult($response);
+    }
+
+    /**
+     * @param ResponseInterface $response
+     * @return mixed
+     * @throws MemberInfoException
+     */
+    private function getMemberInfoResult(ResponseInterface $response)
+    {
+        if ($response->getStatusCode() === 200) {
+
+            if (!is_object($response->getBody())) {
+                throw new MemberInfoException();
+            }
+
+            $contents = $response->getBody()->getContents();
+
+            if (empty($contents)) {
+                throw new MemberInfoException();
+            }
+
+            try {
+                $data = json_decode($contents, true);
+            } catch (Exception $e) {
+                throw new MemberInfoException();
+            }
+
+            return $data;
+        }
+
+        throw new MemberInfoException();
+    }
+
+
+
 }
