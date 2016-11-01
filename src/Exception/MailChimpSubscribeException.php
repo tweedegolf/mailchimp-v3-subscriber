@@ -2,7 +2,6 @@
 
 namespace TweedeGolf\MailChimpV3Subscriber\Exception;
 
-class SubscribeException extends \Exception
+class MailChimpSubscribeException extends \Exception
 {
-
 }
