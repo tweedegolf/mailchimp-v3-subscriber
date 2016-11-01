@@ -2,6 +2,7 @@
     "name": "tweedegolf/mailchimp-v3-subscriber",
     "description": "Simple wrapper around the MailChimp v3 API to subscribe and unsubscribe people from you mailing lists",
     "license": "MIT",
+    "version": "1.0.0",
     "authors": [
         {
             "name": "Hugo van de Pol",

@@ -140,11 +140,11 @@ class MailChimpSubscriber
     public function update($email, array $mergeFields = [], $status = 'subscribed')
     {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw new \InvalidArgumentException("{$email} is not a valid email address");
+            throw new MailChimpSubscribeException("{$email} is not a valid email address");
         }
 
         if (!isset($this->listId) || empty($this->listId)) {
-            throw new \Exception('MailChimp list id is not set');
+            throw new MailChimpSubscribeException('MailChimp list id is not set');
         }
 
         $hash = md5(strtolower($email));
@@ -158,8 +158,6 @@ class MailChimpSubscriber
         // submitting empty merge fields array yields bad request exception
         if (is_array($mergeFields) && count($mergeFields) > 0) {
             $body['merge_fields'] = $mergeFields;
-        } elseif ($status === 'subscribed') {
-            throw new MailChimpSubscribeException('No MailChimp merge fields provided');
         }
 
         try {

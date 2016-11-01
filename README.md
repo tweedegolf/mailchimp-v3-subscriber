@@ -6,7 +6,7 @@ The package provides a simple class called MailChimpSubscriber that offers a sub
 It only depends on Monolog for logging and Guzzle to make the API requests.
 
 ## Install
-```composer require tweedegolf/mailchimp-v3-subscriber dev-master```
+```composer require tweedegolf/mailchimp-v3-subscriber```
 
 ## Usage
 Trivial, see the MailChimpSubscriber class.
