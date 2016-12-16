@@ -18,6 +18,6 @@
     "require": {
         "php": ">=5.4",
         "monolog/monolog": "^1.5",
-        "guzzlehttp/guzzle": "^6.0"
+        "guzzlehttp/guzzle": "^5.3"
     }
 }
