@@ -70,7 +70,7 @@ class MailChimpSubscriber
         list($key, $dataCenterIdentifier) = explode('-', $apiKey);
 
         $client = new Client([
-            'base_uri' => "https://{$dataCenterIdentifier}.{$root}",
+            'base_url' => "https://{$dataCenterIdentifier}.{$root}",
             'headers' => [
                 'Accept' => 'application/json',
                 'Authorization' => "Basic {$key}",
