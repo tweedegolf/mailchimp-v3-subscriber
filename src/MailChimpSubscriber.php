@@ -71,11 +71,13 @@ class MailChimpSubscriber
 
         $client = new Client([
             'base_url' => "https://{$dataCenterIdentifier}.{$root}",
-            'headers' => [
-                'Accept' => 'application/json',
-                'Authorization' => "Basic {$key}",
-            ],
-            'timeout' => 2.0,
+            'defaults' => [
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'Authorization' => "Basic {$key}",
+                ],
+                'timeout' => 2.0
+            ]
         ]);
 
         return $client;
