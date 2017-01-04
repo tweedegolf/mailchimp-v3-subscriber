@@ -2,10 +2,9 @@
 
 namespace TweedeGolf\MailChimpV3Subscriber;
 
-use Behat\Mink\Exception\Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
-use Psr\Http\Message\ResponseInterface;
+use GuzzleHttp\Message\Response;
 use Psr\Log\LoggerInterface;
 use TweedeGolf\MailChimpV3Subscriber\Exception\MailChimpSubscribeException;
 
@@ -205,13 +204,13 @@ class MailChimpSubscriber
     }
 
     /**
-     * @param ResponseInterface $response
+     * @param Response $response
      *
      * @return mixed
      *
      * @throws MailChimpSubscribeException
      */
-    private function decodeMailChimpResponse(ResponseInterface $response)
+    private function decodeMailChimpResponse(Response $response)
     {
         if ($response->getStatusCode() === 200) {
             if (!is_object($response->getBody())) {
