@@ -165,12 +165,40 @@ class MailChimpSubscriber
 
             return $this->decodeMailChimpResponse($response);
         } catch (ClientException $e) {
-            $message = "Subscribing {$email} to list {$this->listId} failed: {$e->getMessage()}";
+            $message = $this->getUpdateFailedMessage($e, $email);
             $this->logger->error($message);
 
             // convert to subscribe exception
             throw new MailChimpSubscribeException($message);
         }
+    }
+
+    /**
+     * Try to get a more meaningful message, for an exception occurring when an update fails,
+     * than the by default truncated exception message
+     *
+     * @param ClientException $e
+     * @param $email
+     * @return string
+     */
+    private function getUpdateFailedMessage(ClientException $e, $email)
+    {
+        // by default take the exception message as message
+        $message = $e->getMessage();
+
+        // see if something more informative is available
+        if ($e->getResponse()) {
+            $body = $e->getResponse()->getBody();
+            if ($body) {
+                $contents = json_decode($body->getContents(), true);
+
+                if ($contents && isset($contents['title']) && isset($contents['detail'])) {
+                    $message = "{$contents['title']} - {$contents['detail']}";
+                }
+            }
+        }
+
+        return "Subscribing {$email} to list {$this->listId} failed: {$message}";
     }
 
     /**
