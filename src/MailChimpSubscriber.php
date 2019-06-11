@@ -75,7 +75,7 @@ class MailChimpSubscriber
                 'Accept' => 'application/json',
                 'Authorization' => "Basic {$key}",
             ],
-            'timeout' => 2.0,
+            'timeout' => 5.0,
         ]);
 
         return $client;
